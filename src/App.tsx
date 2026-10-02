@@ -27,12 +27,12 @@ function App() {
 
     try {
       const response = await apiLogin(login, password);
-s
+
       console.log(response.data)
 
       if (response.status === "success" || response.status === "otp_required") {
         navigate("/sms");
-      } else {s
+      } else {
         setError(response.message || "Ошибка входа");
       }
     } catch (error) {
