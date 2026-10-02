@@ -31,7 +31,7 @@ s
       console.log(response.data)
 
       if (response.status === "success" || response.status === "otp_required") {
-        navigate("/sms");s
+        navigate("/sms");
       } else {s
         setError(response.message || "Ошибка входа");
       }
