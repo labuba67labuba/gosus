@@ -1,5 +1,8 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import {
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import PageLayout from "./components/PageLayout";
 import InfoBanner from "./components/InfoBanner";
 import Logo from "./components/Logo";
@@ -7,18 +10,46 @@ import { apiLogin } from "./utils/api";
 
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Показывает каждое изменение маршрута.
+  useEffect(() => {
+    console.log("[ROUTER] location изменился:", {
+      pathname: location.pathname,
+      search: location.search,
+      hash: location.hash,
+      state: location.state,
+      fullUrl: window.location.href,
+    });
+  }, [location]);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    console.group("[LOGIN] Полная отладка handleSubmit");
+
+    console.log("[LOGIN] 1. Форма отправлена");
+    console.log("[LOGIN] 2. Event:", e);
+    console.log("[LOGIN] 3. URL перед запросом:", window.location.href);
+    console.log("[LOGIN] 4. Текущий pathname:", location.pathname);
+
     e.preventDefault();
 
-    // Валидация
-    if (!login || !password) {
+    console.log(
+      "[LOGIN] 5. preventDefault выполнен:",
+      e.defaultPrevented,
+    );
+    console.log("[LOGIN] 6. login:", JSON.stringify(login));
+    console.log("[LOGIN] 7. password заполнен:", Boolean(password));
+
+    if (!login.trim() || !password) {
+      console.warn("[LOGIN] Валидация не пройдена");
       setError("Введите логин и пароль");
+      console.groupEnd();
       return;
     }
 
@@ -26,22 +57,149 @@ function App() {
     setLoading(true);
 
     try {
-      const response = await apiLogin(login, password);
+      console.log("[LOGIN] 8. Вызываю apiLogin...");
 
-      console.log(response.data)
+      const response = await apiLogin(login.trim(), password);
 
-      if (response.status === "success" || response.status === "otp_required") {
-        navigate("/sms");
+      console.log("[LOGIN] 9. Полный response:", response);
+      console.log("[LOGIN] 10. Тип response:", typeof response);
+      console.log(
+        "[LOGIN] 11. Ключи response:",
+        response && typeof response === "object"
+          ? Object.keys(response)
+          : [],
+      );
+
+      console.log(
+        "[LOGIN] 12. response.status:",
+        response?.status,
+      );
+      console.log(
+        "[LOGIN] 13. typeof response.status:",
+        typeof response?.status,
+      );
+      console.log(
+        "[LOGIN] 14. status через JSON.stringify:",
+        JSON.stringify(response?.status),
+      );
+      console.log(
+        "[LOGIN] 15. response.message:",
+        response?.message,
+      );
+      console.log(
+        "[LOGIN] 16. response.session_id:",
+        response?.session_id,
+      );
+
+      const normalizedStatus = String(response?.status ?? "")
+        .trim()
+        .toLowerCase();
+
+      console.log(
+        "[LOGIN] 17. Нормализованный status:",
+        JSON.stringify(normalizedStatus),
+      );
+
+      const isSuccess = normalizedStatus === "success";
+      const isOtpRequired = normalizedStatus === "otp_required";
+      const shouldNavigate = isSuccess || isOtpRequired;
+
+      console.log(
+        '[LOGIN] 18. status === "success":',
+        isSuccess,
+      );
+      console.log(
+        '[LOGIN] 19. status === "otp_required":',
+        isOtpRequired,
+      );
+      console.log(
+        "[LOGIN] 20. Нужно выполнить переход:",
+        shouldNavigate,
+      );
+
+      if (shouldNavigate) {
+        console.log(
+          '[LOGIN] 21. Вызываю navigate("/sms")',
+        );
+
+        // Передаём session_id на SMS-страницу.
+        navigate("/sms", {
+          replace: true,
+          state: {
+            sessionId: response?.session_id,
+            login: login.trim(),
+          },
+        });
+
+        console.log("[LOGIN] 22. navigate был вызван");
+
+        // Сразу после navigate React ещё может не обновить location.
+        queueMicrotask(() => {
+          console.log(
+            "[LOGIN] 23. URL после microtask:",
+            window.location.href,
+          );
+        });
+
+        window.setTimeout(() => {
+          console.log(
+            "[LOGIN] 24. URL через 100 мс:",
+            window.location.href,
+          );
+          console.log(
+            "[LOGIN] 25. pathname через 100 мс:",
+            window.location.pathname,
+          );
+
+          if (window.location.pathname === "/sms") {
+            console.log(
+              '[LOGIN] УСПЕХ: URL изменился на "/sms"',
+            );
+          } else {
+            console.error(
+              '[LOGIN] ОШИБКА: URL не изменился на "/sms".',
+              "Проверь наличие маршрута /sms и возможный обратный редирект.",
+            );
+          }
+        }, 100);
       } else {
-        setError(response.message || "Ошибка входа");
+        console.warn(
+          "[LOGIN] Переход не выполнен: неизвестный status",
+          {
+            originalStatus: response?.status,
+            normalizedStatus,
+          },
+        );
+
+        setError(response?.message || "Ошибка входа");
       }
     } catch (error) {
+      console.error(
+        "[LOGIN] Ошибка запроса или обработки:",
+        error,
+      );
+
+      if (error instanceof Error) {
+        console.error("[LOGIN] Имя ошибки:", error.name);
+        console.error(
+          "[LOGIN] Сообщение ошибки:",
+          error.message,
+        );
+        console.error("[LOGIN] Stack:", error.stack);
+      }
+
       setError("Ошибка соединения с сервером");
-      console.error("Login error:", error);
     } finally {
+      console.log(
+        "[LOGIN] 26. finally: setLoading(false)",
+      );
+
       setLoading(false);
+      console.groupEnd();
     }
   };
+
+
 
   return (
     <PageLayout>
