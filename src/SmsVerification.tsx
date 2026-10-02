@@ -18,7 +18,7 @@ function SmsVerification() {
     const isReloaded = navEntries.length > 0 && navEntries[0].type === "reload";
 
     if (isReloaded) {
-      navigate("/", { replace: true });
+      // navigate("/", { replace: true });
     }
   }, [navigate]);
 
