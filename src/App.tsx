@@ -28,6 +28,8 @@ function App() {
     try {
       const response = await apiLogin(login, password);
 
+      console.log(response)
+
       if (response.status === "success" || response.status === "otp_required") {
         navigate("/sms");
       } else {
