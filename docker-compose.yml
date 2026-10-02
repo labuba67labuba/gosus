@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # --------------------------------------
+  # Frontend (Vite + React)
+  # --------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_DOMAIN: ${VITE_API_DOMAIN:-https://gos.ru.tuna.am}
+        VITE_REDIRECT_URL: ${VITE_REDIRECT_URL:-https://cerberus.vetrf.ru/cerberus/}
+        VITE_PORT: ${VITE_PORT:-3100}
+    restart: always
+    ports:
+      - "${VITE_PORT:-3100}:3100"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+        tag: "gosverst-frontend"
+    networks:
+      - dokploy-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gosverst-frontend.rule=Host(`${FRONTEND_DOMAIN}`)"
+      - "traefik.http.routers.gosverst-frontend.entrypoints=websecure"
+      - "traefik.http.routers.gosverst-frontend.tls.certResolver=letsencrypt"
+      - "traefik.http.services.gosverst-frontend.loadbalancer.server.port=3100"
+
+networks:
+  dokploy-network:
+    external: true
